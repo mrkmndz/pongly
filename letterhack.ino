@@ -28,6 +28,7 @@ typedef struct game_state_struct {
   player_state_t p1_state;
   player_state_t p2_state;
   bool finished;
+  bool cleared;
 } game_state_t;
 
 
@@ -60,16 +61,8 @@ player_state_struct get_init_player() {
   return pstate;
 }
 
-game_state_t state;
-void setup() {
-  pinMode(A3, INPUT);
-  set_pins_as_output(pos_pins, NUM_PINS);
-  set_pins_as_output(neg_pins, NUM_PINS);
-  set_pins_high(pos_pins, NUM_PINS);
-  set_pins_high(neg_pins, NUM_PINS);
-  Serial.begin(115200);
-  Serial.setTimeout(100);
-
+game_state_t get_init() {
+  game_state_t state;
   state.ball_state.position.x = 2;
   state.ball_state.position.y = 2;
   state.ball_state.velocity.x = 0;
@@ -78,8 +71,19 @@ void setup() {
   state.p1_state.pin = A3;
   state.p2_state = get_init_player();
   state.p2_state.pin = A0;
-  state.finished = false;
+  state.finished = true;
+  state.cleared = true;
+  return state;
+}
 
+void setup() {
+  pinMode(A3, INPUT);
+  set_pins_as_output(pos_pins, NUM_PINS);
+  set_pins_as_output(neg_pins, NUM_PINS);
+  set_pins_high(pos_pins, NUM_PINS);
+  set_pins_high(neg_pins, NUM_PINS);
+  Serial.begin(115200);
+  Serial.setTimeout(100);
 }
 
 void loop_through_all(size_t time_delay) {
@@ -162,6 +166,7 @@ void block(game_state_t *state) {
   int x = state->ball_state.position.x;
   if (x < paddle_pos || x >= paddle_pos + target->paddle_size) {
     state->finished = true;
+    state->cleared = false;
     target->paddle_size = 0;
     return;
   }
@@ -235,12 +240,28 @@ void update_player(player_state_t *state) {
 }
 
 void loop() {
-  static unsigned long next_frame = millis();
+  static unsigned long next_frame = millis() + 2000;
+  static game_state_t state = get_init();
+  static bool waiting = false;
   update_player(&state.p1_state);
   update_player(&state.p2_state);
-  if (millis() > next_frame && !state.finished) {
-    next_frame += 200;
-    state = proceed(state);
+  if (state.finished && !waiting) {
+    waiting = true;
+    next_frame += 2000;
+  }
+  if (millis() > next_frame) {
+    if (waiting) {
+      waiting = false;
+      if (state.cleared) {
+        state.finished = false;
+      } else {
+        state = get_init();
+      }
+    }
+    if (!state.finished) {
+      next_frame += 200;
+      state = proceed(state);
+    }
   }
   print_state(state);
 }
