@@ -56,7 +56,7 @@ void display(byte pattern[6][6])
   }
 }
 
-byte n[6][6] = {{0, 0, 0, 0, 0, 0},
+const byte blank[6][6] = {{0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0},
@@ -92,6 +92,95 @@ byte k[6][6] = {{0, 1, 0, 0, 1, 0},
                 {0, 1, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0}};
 
+void addVecs(byte* v1, byte* v2, byte* sum) {
+  byte* a = v1[0] + v2[0];
+  byte* b = v1[1] + v2[1];
+  memcpy(sum, a, sizeof(byte));
+  memcpy(sum[1], b, sizeof(byte));
+}
+
+void procede(byte p1p, byte p1l, byte p2p, byte p2l, byte* bp, byte* bv) {
+  byte* next_pos;
+  addVecs(bp, bv, next_pos);
+  byte new_vel[2];
+  memcpy(new_vel, bv, sizeof(byte) * 2);
+
+  // First, x-coordinate
+  if (next_pos[0] == 0 || next_pos[0] == 5) {
+    // Need to add actual check for collision!
+    // Will make use of paddle positions
+    new_vel[0] *= -1;
+  }
+
+  // Second, y-coordinate
+  if (next_pos[1] < 0 || next_pos[1] > 5) {
+    new_vel[1] *= -1;
+  }
+
+  memcpy(bv, new_vel, sizeof(byte) * 2);
+  addVecs(bp, bv, bp);
+}
+
+byte* getPattern(byte p1p, byte p1l, byte p2p, byte p2l, byte* bp) {
+  byte pattern[36];
+  memcpy(pattern, blank, sizeof(byte) * 36);
+  for (int i = 0; i < p1l; i++) {
+    pattern[p1p + i] = 1;
+  }
+  for (int i = 0; i < p2l; i++) {
+    pattern[6 * 5 + p2p + i] = 1;
+  }
+  pattern[6 * bp[0] + bp[1]] = 1;
+  return pattern;
+}
+
+//byte[6][6] toArray(byte* ptr) {
+//  byte arr[6][6];
+//  for (int r = 0; r < 6; r++) {
+//    for (int c = 0; c < 6; c++) {
+//      arr[r][c] = ptr[6*r + c];
+//    }
+//  }
+//  return arr;
+//}
+
+// int rep = 0;
+/* States are: 
+  0: menu
+  1: playing pong game
+*/
+int state = 0;
+byte p1_length = 6;
+byte p2_length = 6;
+byte p1_pos = 0;
+byte p2_pos = 0;
+int game_start = 0;
+byte ball_pos[2];
+byte ball_vel[2];
+int ball_speed;
+void ben_loop() {
+  if (state == 0) {
+    if (true) {
+      state = 1;
+      ball_pos[0] = 1;
+      ball_pos[1] = 0;
+      ball_vel[0] = 1;
+      ball_vel[1] = 1;
+//      ball_vel = {1, 1};
+      ball_speed = 1000;
+      game_start = millis(); 
+    }
+  }
+
+  else if (state == 1) {
+    if ((millis() - game_start) % ball_speed == 0) {
+      procede(p1_pos, p1_length, p2_pos, p2_length, ball_pos, ball_vel);
+    }
+    byte* pattern = getPattern(p1_pos, p1_length, p2_pos, p2_length, ball_pos);
+    display((byte[6][6])pattern);
+  }
+}
+
 byte get_pos(int pin, byte paddle_size) {
   float val = analogRead(pin);    // read the input pin
   float max_val = 400;
@@ -100,7 +189,6 @@ byte get_pos(int pin, byte paddle_size) {
   return (pos > range) ? range : pos;
 }
 
-int rep = 0;
 void loop() {
   byte pattern[6][6];
   for (int i = 0; i<6; i++) {
@@ -116,4 +204,3 @@ void loop() {
   pattern[Bpos + 1][5] = 1;
   display(pattern);
 }
-
