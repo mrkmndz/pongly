@@ -21,6 +21,7 @@ void set_pins_high(int *pins, size_t len) {
 }
 
 void setup() {
+  pinMode(A3, INPUT);
   set_pins_as_output(pos_pins, NUM_PINS);
   set_pins_as_output(neg_pins, NUM_PINS);
   set_pins_high(pos_pins, NUM_PINS);
@@ -91,25 +92,28 @@ byte k[6][6] = {{0, 1, 0, 0, 1, 0},
                 {0, 1, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0}};
 
+byte get_pos(int pin, byte paddle_size) {
+  float val = analogRead(pin);    // read the input pin
+  float max_val = 400;
+  int range = 6 - paddle_size;
+  int pos = (val/max_val) * range;
+  return (pos > range) ? range : pos;
+}
+
 int rep = 0;
 void loop() {
-  int state = rep % 4;
-  switch (state) {
-    case 0:
-    display(m);
-    break;
-    case 1:
-    display(a);
-    break;
-    case 2:
-    display(r);
-    break;
-    case 3:
-    display(k);
-    break;
+  byte pattern[6][6];
+  for (int i = 0; i<6; i++) {
+    for (int j = 0; j<6; j++) {
+      pattern[i][j]=0;
+    }
   }
-  if (micros() % 10000 == 0) {
-    Serial.println("switch");
-    rep++;
-  }
+  int Apos = get_pos(A3, 2);
+  pattern[Apos][0] = 1;
+  pattern[Apos + 1][0] = 1;
+  int Bpos = get_pos(A0, 2);
+  pattern[Bpos][5] = 1;
+  pattern[Bpos + 1][5] = 1;
+  display(pattern);
 }
+
