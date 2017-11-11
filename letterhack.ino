@@ -2,6 +2,24 @@ int pos_pins[] = {2, 3, 4, 5, 6, 7};
 int neg_pins[] = {8, 9, 10, 11, 12, 13};
 #define NUM_PINS 6
 
+typedef struct vec_struct {
+  byte x;
+  byte y;
+} vec_t; 
+
+typedef struct ball_state_struct {
+  vec_t position;
+  vec_t velocity;
+} ball_state_t;
+
+typedef struct game_state_struct {
+  ball_state_t ball_state;
+  byte paddle_lengths;
+  byte p1_position;
+  byte p2_position;
+} game_state_t;
+
+
 void set_pins_as_output(int *pins, size_t len) {
   for (int i = 0; i < len; i++) {
     pinMode(pins[i], OUTPUT);
@@ -102,23 +120,6 @@ byte k[6][6] = {{0, 1, 0, 0, 1, 0},
                 {0, 1, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0}};
 
-typedef struct vec_struct {
-  byte x;
-  byte y;
-} vec_t; 
-
-typedef struct ball_state_struct {
-  vec_t position;
-  vec_t velocity;
-} ball_state_t;
-
-typedef struct game_state_struct {
-  ball_state_t ball_state;
-  byte paddle_lengths;
-  byte p1_position;
-  byte p2_position;
-} game_state_t;
-
 vec_t addVecs(vect_t v1, vec_t v2) {
   vec_t sum;
   sum.x = v1.x + v2.x;
@@ -126,7 +127,7 @@ vec_t addVecs(vect_t v1, vec_t v2) {
   return sum;
 }
 
-game_state_t procede(game_state_t state) {
+game_state_t proceed(game_state_t state) {
   ball_state_t ball_state = state.ball_state;
   vec_t next_ball_position = addVecs(ball_state.position, ball_state.velocity);
 
@@ -181,5 +182,5 @@ void loop() {
   state.p1_position = get_pos(A3, state.paddle_lengths);
   state.p2_position = get_pos(A0, state.paddle_lengths);
   state = proceed(state);
-  display(pattern);
+  print_state(pattern);
 }
