@@ -120,7 +120,7 @@ byte k[6][6] = {{0, 1, 0, 0, 1, 0},
                 {0, 1, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0}};
 
-vec_t addVecs(vect_t v1, vec_t v2) {
+vec_t addVecs(vec_t v1, vec_t v2) {
   vec_t sum;
   sum.x = v1.x + v2.x;
   sum.y = v1.y + v2.y;
@@ -162,10 +162,10 @@ void print_state(game_state_t state) {
     pattern[state.p1_position + i][0] = 1;
   }
   for (int i = 0; i < state.paddle_lengths; i++) {
-    pattern[state.p2_position + i][0] = 1;
+    pattern[state.p2_position + i][5] = 1;
   }
   ball_state_t ball_state = state.ball_state;
-  pattern[ball_state.x][ball_state.y] = 1;
+  pattern[ball_state.position.x][ball_state.position.y] = 1;
   display(pattern);
 }
 
@@ -181,6 +181,8 @@ void loop() {
   static int game_start = millis();
   state.p1_position = get_pos(A3, state.paddle_lengths);
   state.p2_position = get_pos(A0, state.paddle_lengths);
-  state = proceed(state);
-  print_state(pattern);
+  if (millis() - game_start % 100 == 0) {
+    state = proceed(state);
+  }
+  print_state(state);
 }
