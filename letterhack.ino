@@ -91,18 +91,23 @@ byte k[6][6] = {{0, 1, 0, 0, 1, 0},
                 {0, 1, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0}};
 
-int* addVecs(int* v1, int* v2) {
-  int res[2] = {v1[0] + v2[0], v1[1], v2[1]};
-  return res;
+void addVecs(byte* v1, byte* v2, byte* sum) {
+  byte* a = v1[0] + v2[0];
+  byte* b = v1[1] + v2[1];
+  memcpy(sum, a, sizeof(byte));
+  memcpy(sum[1], b, sizeof(byte));
 }
 
-void procede() {
-  int next_pos[2] = addVecs(ball_pos, ball_vel);
-  int new_vel[2] = memcpy(ball_vel);
+void procede(byte p1p, byte p1l, byte p2p, byte p2l, byte* bp, byte* bv) {
+  byte* next_pos;
+  addVecs(bp, bv, next_pos);
+  byte new_vel[2];
+  memcpy(new_vel, bv, sizeof(byte) * 2);
 
   // First, x-coordinate
   if (next_pos[0] == 0 || next_pos[0] == 5) {
     // Need to add actual check for collision!
+    // Will make use of paddle positions
     new_vel[0] *= -1;
   }
 
@@ -111,21 +116,32 @@ void procede() {
     new_vel[1] *= -1;
   }
 
-  ball_vel = memcpy(new_vel);
-  ball_pos = addVecs(ball_pos, ball_vel);
+  memcpy(bv, new_vel, sizeof(byte) * 2);
+  addVecs(bp, bv, bp);
 }
 
-byte* getPattern() {
-  byte pattern[6][6] = blank;
-  for (int i = 0; i < p1_length; i++) {
-    pattern[0][p1_pos + i] = 1;
+byte* getPattern(byte p1p, byte p1l, byte p2p, byte p2l, byte* bp) {
+  byte pattern[36];
+  memcpy(pattern, blank, sizeof(byte) * 36);
+  for (int i = 0; i < p1l; i++) {
+    pattern[p1p + i] = 1;
   }
-  for (int i = 0; i < p2_length; i++) {
-    pattern[5][p2_pos + i] = 1;
+  for (int i = 0; i < p2l; i++) {
+    pattern[6 * 5 + p2p + i] = 1;
   }
-  pattern[ball_pos[0]][ball_pos[1]] = 1;
+  pattern[6 * bp[0] + bp[1]] = 1;
   return pattern;
 }
+
+//byte[6][6] toArray(byte* ptr) {
+//  byte arr[6][6];
+//  for (int r = 0; r < 6; r++) {
+//    for (int c = 0; c < 6; c++) {
+//      arr[r][c] = ptr[6*r + c];
+//    }
+//  }
+//  return arr;
+//}
 
 // int rep = 0;
 /* States are: 
@@ -133,30 +149,34 @@ byte* getPattern() {
   1: playing pong game
 */
 int state = 0;
-int p1_length = 6;
-int p2_length = 6;
-int p1_pos = 0;
-int p2_pos = 0;
+byte p1_length = 6;
+byte p2_length = 6;
+byte p1_pos = 0;
+byte p2_pos = 0;
 int game_start = 0;
-int ball_pos[2];
-int ball_vel[2];
+byte ball_pos[2];
+byte ball_vel[2];
 int ball_speed;
 void loop() {
   if (state == 0) {
     if (true) {
       state = 1;
-      ball_pos = {1, 0};
-      ball_vel = {1, 1};
+      ball_pos[0] = 1;
+      ball_pos[1] = 0;
+      ball_vel[0] = 1;
+      ball_vel[1] = 1;
+//      ball_vel = {1, 1};
       ball_speed = 1000;
       game_start = millis(); 
     }
   }
 
   else if (state == 1) {
-    if ((millis() - game_start % ball_speed == 0) {
-      procede();
+    if ((millis() - game_start) % ball_speed == 0) {
+      procede(p1_pos, p1_length, p2_pos, p2_length, ball_pos, ball_vel);
     }
-    display(getPattern());
+    byte* pattern = getPattern(p1_pos, p1_length, p2_pos, p2_length, ball_pos);
+    display((byte[6][6])pattern);
   }
   // int state = rep % 4;
   // switch (state) {
