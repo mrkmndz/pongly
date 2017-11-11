@@ -3,8 +3,8 @@ int neg_pins[] = {8, 9, 10, 11, 12, 13};
 #define NUM_PINS 6
 
 typedef struct vec_struct {
-  byte x;
-  byte y;
+  int x;
+  int y;
 } vec_t; 
 
 typedef struct ball_state_struct {
@@ -13,12 +13,12 @@ typedef struct ball_state_struct {
 } ball_state_t;
 
 typedef struct player_state_struct {
-  byte position;
-  byte last_position;
-  byte direction;
-  byte pin;
+  int position;
+  int last_position;
+  int direction;
+  int pin;
   unsigned long next_sense;
-  byte paddle_size;
+  int paddle_size;
 } player_state_t;
   
 
@@ -68,8 +68,8 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(100);
 
-  state.ball_state.position.x = 3;
-  state.ball_state.position.y = 4;
+  state.ball_state.position.x = 2;
+  state.ball_state.position.y = 2;
   state.ball_state.velocity.x = 0;
   state.ball_state.velocity.y = 1;
   state.p1_state = get_init_player();
@@ -155,10 +155,10 @@ game_state_t move_ball(game_state_t state) {
 }
 
 bool blocked_by_player(game_state_t *state) {
-  byte y = state->ball_state.position.y;
+  int y = state->ball_state.position.y;
   player_state_t target = (y == 0) ? state->p1_state : state->p2_state;
-  byte paddle_pos = target.position;
-  byte x = state->ball_state.position.x;
+  int paddle_pos = target.position;
+  int x = state->ball_state.position.x;
   if (x < paddle_pos || x >= paddle_pos + target.paddle_size) {
     return false;
   }
@@ -170,11 +170,13 @@ bool blocked_by_player(game_state_t *state) {
 game_state_t proceed(game_state_t state) {
   state = move_ball(state);
 
-  byte x = state.ball_state.position.x;
+  int x = state.ball_state.position.x;
   if (x < 0) {
+    Serial.print("off low");
     state.ball_state.velocity.x = 1;
     state.ball_state.position.x = 1;
   } else if (x > 5) {
+    Serial.print("off high");
     state.ball_state.velocity.x = -1;
     state.ball_state.position.x = 4;
   }
@@ -215,7 +217,7 @@ void update_player(player_state_t *state) {
   int pos = (val/max_val) * range;
   state->position = (pos > range) ? range : pos;
   if (millis() > state->next_sense) {
-    state->next_sense += 10;
+    state->next_sense += 100;
     if (state->position == state->last_position) {
       state->direction = 0;
     } else if (state->position > state->last_position) {
