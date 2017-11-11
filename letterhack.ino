@@ -48,11 +48,10 @@ void setup() {
   set_pins_high(neg_pins, NUM_PINS);
   Serial.begin(115200);
   Serial.setTimeout(100);
-  loop_through_all(50);
 
   state.ball_state.position.x = 3;
   state.ball_state.position.y = 4;
-  state.ball_state.velocity.x = 1;
+  state.ball_state.velocity.x = 0;
   state.ball_state.velocity.y = 1;
   state.p1_position = 0;
   state.p2_position = 0;
@@ -130,14 +129,15 @@ vec_t addVecs(vec_t v1, vec_t v2) {
 }
 
 game_state_t move_ball(game_state_t state) {
-  ball_state_t b = state->ball_state;
+  ball_state_t b = state.ball_state;
   state.ball_state.position = addVecs(b.position, b.velocity);
   return state;
 }
 
 bool blocked_by_player(game_state_t state) {
+  byte y = state.ball_state.position.y;
+  byte paddle_pos = (y == 0) ? state.p1_position : state.p2_position;
   byte x = state.ball_state.position.x;
-  byte paddle_pos = (x == 0) ? state.p1_position : state.p2.position;
   return x >= paddle_pos && x < paddle_pos + state.paddle_lengths;
 }
 
@@ -146,24 +146,26 @@ game_state_t proceed(game_state_t state) {
 
   switch (state.ball_state.position.x) {
     case 0:
-      if (blocked_by_player(state)) {
-        state.ball_state.velocity.x *= -1
-      } else {
-        state.ended = true;
-      }
-    break;
     case 5:
-      if (blocked_by_player(state)) {
-        state.ball_state.velocity.x *= -1
-      } else {
-        state.ended = true;
-      }
+        state.ball_state.velocity.x *= -1;
     break;
   }
+
   switch (state.ball_state.position.y) {
     case 0:
+      if (blocked_by_player(state)) {
+        state.ball_state.velocity.y *= -1;
+      } else {
+        Serial.println("done");
+        state.finished = true;
+      }
+    break;
     case 5:
-        state.ball_state.velocity.y *= -1
+      if (blocked_by_player(state)) {
+        state.ball_state.velocity.y *= -1;
+      } else {
+        state.finished = true;
+      }
     break;
   }
 
@@ -201,7 +203,7 @@ void loop() {
   state.p1_position = get_pos(A3, state.paddle_lengths);
   state.p2_position = get_pos(A0, state.paddle_lengths);
   if (millis() > next_frame && !state.finished) {
-    next_frame += 1000;
+    next_frame += 100;
     state = proceed(state);
   }
   print_state(state);
