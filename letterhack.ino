@@ -16,13 +16,14 @@ typedef struct player_state_struct {
   byte position;
   byte last_position;
   byte direction;
+  byte pin;
   unsigned long next_sense;
+  byte paddle_size;
 } player_state_t;
   
 
 typedef struct game_state_struct {
   ball_state_t ball_state;
-  byte paddle_lengths;
   player_state_t p1_state;
   player_state_t p2_state;
   bool finished;
@@ -50,9 +51,11 @@ void set_pins_high(int *pins, size_t len) {
 player_state_struct get_init_player() {
   player_state_struct pstate;
   pstate.position = 0;
-  pstate.last_position = 0
+  pstate.last_position = 0;
   pstate.direction = 0;
+  pstate.paddle_size = 2;
   pstate.next_sense = millis();
+  return pstate;
 }
 
 game_state_t state;
@@ -70,8 +73,9 @@ void setup() {
   state.ball_state.velocity.x = 0;
   state.ball_state.velocity.y = 1;
   state.p1_state = get_init_player();
+  state.p1_state.pin = A3;
   state.p2_state = get_init_player();
-  state.paddle_lengths = 2;
+  state.p2_state.pin = A0;
   state.finished = false;
 
 }
@@ -155,11 +159,12 @@ bool blocked_by_player(game_state_t *state) {
   player_state_t target = (y == 0) ? state->p1_state : state->p2_state;
   byte paddle_pos = target.position;
   byte x = state->ball_state.position.x;
-  if (x < paddle_pos || x >= paddle_pos + state.paddle_lengths) {
+  if (x < paddle_pos || x >= paddle_pos + target.paddle_size) {
     return false;
   }
-  state->ball_state->velocity.y *= -1;
-  state.ball_state.velocity.x = target.direction;
+  state->ball_state.velocity.y *= -1;
+  state->ball_state.velocity.x = target.direction;
+  return true;
 }
 
 game_state_t proceed(game_state_t state) {
@@ -168,10 +173,10 @@ game_state_t proceed(game_state_t state) {
   byte x = state.ball_state.position.x;
   if (x < 0) {
     state.ball_state.velocity.x = 1;
-    state.ball_state.position.x = 0;
-  if (x > 5) {
-    state.ball_state.velocity = -1;
-    state.ball_state.position.x = 5;
+    state.ball_state.position.x = 1;
+  } else if (x > 5) {
+    state.ball_state.velocity.x = -1;
+    state.ball_state.position.x = 4;
   }
 
   switch (state.ball_state.position.y) {
@@ -192,11 +197,11 @@ void print_state(game_state_t state) {
       pattern[i][j]=0;
     }
   }
-  for (int i = 0; i < state.paddle_lengths; i++) {
-    pattern[state.p1_position + i][0] = 1;
+  for (int i = 0; i < state.p1_state.paddle_size; i++) {
+    pattern[state.p1_state.position + i][0] = 1;
   }
-  for (int i = 0; i < state.paddle_lengths; i++) {
-    pattern[state.p2_position + i][5] = 1;
+  for (int i = 0; i < state.p2_state.paddle_size; i++) {
+    pattern[state.p2_state.position + i][5] = 1;
   }
   ball_state_t ball_state = state.ball_state;
   pattern[ball_state.position.x][ball_state.position.y] = 1;
@@ -204,16 +209,16 @@ void print_state(game_state_t state) {
 }
 
 void update_player(player_state_t *state) {
-  float val = analogRead(pin);    // read the input pin
+  float val = analogRead(state->pin);    // read the input pin
   float max_val = 400;
-  int range = 6 - paddle_size;
+  int range = 6 - state->paddle_size;
   int pos = (val/max_val) * range;
   state->position = (pos > range) ? range : pos;
   if (millis() > state->next_sense) {
     state->next_sense += 10;
     if (state->position == state->last_position) {
       state->direction = 0;
-    } else if (state->position > state->last_positon) {
+    } else if (state->position > state->last_position) {
       state->direction = 1;
     } else {
       state->direction = -1;
@@ -224,10 +229,10 @@ void update_player(player_state_t *state) {
 
 void loop() {
   static unsigned long next_frame = millis();
-  update_player(&state->p1_state);
-  update_player(&state->p2_state);
+  update_player(&state.p1_state);
+  update_player(&state.p2_state);
   if (millis() > next_frame && !state.finished) {
-    next_frame += 100;
+    next_frame += 300;
     state = proceed(state);
   }
   print_state(state);
