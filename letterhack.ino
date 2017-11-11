@@ -16,6 +16,7 @@ typedef struct player_state_struct {
   int position;
   int last_position;
   int direction;
+  float ewma;
   int pin;
   unsigned long next_sense;
   int paddle_size;
@@ -53,6 +54,7 @@ player_state_struct get_init_player() {
   pstate.position = 0;
   pstate.last_position = 0;
   pstate.direction = 0;
+  pstate.ewma = 0;
   pstate.paddle_size = 3;
   pstate.next_sense = millis();
   return pstate;
@@ -164,12 +166,8 @@ void block(game_state_t *state) {
     return;
   }
   state->ball_state.velocity.y *= -1;
-  state->ball_state.velocity.x += target->direction;
-  if (state->ball_state.velocity.x >= 1) {
-    state->ball_state.velocity.x = 1;
-  } else if (state->ball_state.velocity.x <= -1) {
-    state->ball_state.velocity.x = -1;
-  } else {
+  state->ball_state.velocity.x = target->direction;
+  if (target->direction == 0) {
     move_ball(state);
   }
   move_ball(state);
@@ -180,11 +178,9 @@ game_state_t proceed(game_state_t state) {
 
   int x = state.ball_state.position.x;
   if (x < 0) {
-    Serial.print("off low");
     state.ball_state.velocity.x = 1;
     state.ball_state.position.x = 1;
   } else if (x > 5) {
-    Serial.print("off high");
     state.ball_state.velocity.x = -1;
     state.ball_state.position.x = 4;
   }
@@ -223,14 +219,17 @@ void update_player(player_state_t *state) {
   int pos = (val/max_val) * range;
   state->position = (pos > range) ? range : pos;
   if (millis() > state->next_sense) {
-    state->next_sense += 60;
-    if (state->position == state->last_position) {
-      state->direction = 0;
-    } else if (state->position > state->last_position) {
+    state->next_sense += 10;
+    float diff = state->position - state->last_position;
+    state->ewma = 1000 * diff * .2 + state->ewma * .8;
+    if (state->ewma > 1) {
       state->direction = 1;
-    } else {
+    } else if (state->ewma < -1) {
       state->direction = -1;
+    } else {
+      state->direction = 0;
     }
+    Serial.println(state->direction);
     state->last_position = state->position;
   }
 }
