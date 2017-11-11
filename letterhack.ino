@@ -149,6 +149,7 @@ game_state_t proceed(game_state_t state) {
   
   state.ball_state.position = next_ball_position;
   state.ball_state.velocity = next_ball_velocity;
+  return state;
 }
 
 void print_state(game_state_t state) {
