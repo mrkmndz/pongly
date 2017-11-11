@@ -53,7 +53,7 @@ player_state_struct get_init_player() {
   pstate.position = 0;
   pstate.last_position = 0;
   pstate.direction = 0;
-  pstate.paddle_size = 2;
+  pstate.paddle_size = 3;
   pstate.next_sense = millis();
   return pstate;
 }
@@ -148,27 +148,35 @@ vec_t addVecs(vec_t v1, vec_t v2) {
   return sum;
 }
 
-game_state_t move_ball(game_state_t state) {
-  ball_state_t b = state.ball_state;
-  state.ball_state.position = addVecs(b.position, b.velocity);
-  return state;
+void move_ball(game_state_t *state) {
+  ball_state_t b = state->ball_state;
+  state->ball_state.position = addVecs(b.position, b.velocity);
 }
 
-bool blocked_by_player(game_state_t *state) {
+void block(game_state_t *state) {
   int y = state->ball_state.position.y;
-  player_state_t target = (y == 0) ? state->p1_state : state->p2_state;
-  int paddle_pos = target.position;
+  player_state_t *target = (y == 0) ? &state->p1_state : &state->p2_state;
+  int paddle_pos = target->position;
   int x = state->ball_state.position.x;
-  if (x < paddle_pos || x >= paddle_pos + target.paddle_size) {
-    return false;
+  if (x < paddle_pos || x >= paddle_pos + target->paddle_size) {
+    state->finished = true;
+    target->paddle_size = 0;
+    return;
   }
   state->ball_state.velocity.y *= -1;
-  state->ball_state.velocity.x = target.direction;
-  return true;
+  state->ball_state.velocity.x += target->direction;
+  if (state->ball_state.velocity.x >= 1) {
+    state->ball_state.velocity.x = 1;
+  } else if (state->ball_state.velocity.x <= -1) {
+    state->ball_state.velocity.x = -1;
+  } else {
+    move_ball(state);
+  }
+  move_ball(state);
 }
 
 game_state_t proceed(game_state_t state) {
-  state = move_ball(state);
+  move_ball(&state);
 
   int x = state.ball_state.position.x;
   if (x < 0) {
@@ -184,9 +192,7 @@ game_state_t proceed(game_state_t state) {
   switch (state.ball_state.position.y) {
     case 0:
     case 5:
-    if (!blocked_by_player(&state)) {
-      state.finished = true;
-    }
+      block(&state);
   }
 
   return state;
@@ -217,7 +223,7 @@ void update_player(player_state_t *state) {
   int pos = (val/max_val) * range;
   state->position = (pos > range) ? range : pos;
   if (millis() > state->next_sense) {
-    state->next_sense += 100;
+    state->next_sense += 60;
     if (state->position == state->last_position) {
       state->direction = 0;
     } else if (state->position > state->last_position) {
@@ -234,7 +240,7 @@ void loop() {
   update_player(&state.p1_state);
   update_player(&state.p2_state);
   if (millis() > next_frame && !state.finished) {
-    next_frame += 300;
+    next_frame += 200;
     state = proceed(state);
   }
   print_state(state);
