@@ -20,6 +20,7 @@ void set_pins_high(int *pins, size_t len) {
   }
 }
 
+game_state_t state;
 void setup() {
   pinMode(A3, INPUT);
   set_pins_as_output(pos_pins, NUM_PINS);
@@ -29,6 +30,15 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(100);
   loop_through_all(50);
+
+  state.ball_state.position.x = 3;
+  state.ball_state.position.y = 4;
+  state.ball_state.velocity.x = 1;
+  state.ball_state.velocity.y = 1;
+  state.p1_position = 0;
+  state.p2_position = 0;
+  state.paddle_lengths = 2;
+
 }
 
 void loop_through_all(size_t time_delay) {
@@ -92,93 +102,70 @@ byte k[6][6] = {{0, 1, 0, 0, 1, 0},
                 {0, 1, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0}};
 
-void addVecs(byte* v1, byte* v2, byte* sum) {
-  byte* a = v1[0] + v2[0];
-  byte* b = v1[1] + v2[1];
-  memcpy(sum, a, sizeof(byte));
-  memcpy(sum[1], b, sizeof(byte));
+typedef struct vec_struct {
+  byte x;
+  byte y;
+} vec_t; 
+
+typedef struct ball_state_struct {
+  vec_t position;
+  vec_t velocity;
+} ball_state_t;
+
+typedef struct game_state_struct {
+  ball_state_t ball_state;
+  byte paddle_lengths;
+  byte p1_position;
+  byte p2_position;
+} game_state_t;
+
+vec_t addVecs(vect_t v1, vec_t v2) {
+  vec_t sum;
+  sum.x = v1.x + v2.x;
+  sum.y = v1.y + v2.y;
+  return sum;
 }
 
-void procede(byte p1p, byte p1l, byte p2p, byte p2l, byte* bp, byte* bv) {
-  byte* next_pos;
-  addVecs(bp, bv, next_pos);
-  byte new_vel[2];
-  memcpy(new_vel, bv, sizeof(byte) * 2);
+game_state_t procede(game_state_t state) {
+  ball_state_t ball_state = state.ball_state;
+  vec_t next_ball_position = addVecs(ball_state.position, ball_state.velocity);
 
-  // First, x-coordinate
-  if (next_pos[0] == 0 || next_pos[0] == 5) {
-    // Need to add actual check for collision!
-    // Will make use of paddle positions
-    new_vel[0] *= -1;
+  vec_t next_ball_velocity;
+
+  byte next_x = next_ball_position.x;
+  if (next_x == 0 || next_x == 5) {
+    next_ball_velocity.x = ball_state.velocity.x * -1;
+  } else {
+    next_ball_velocity.x = ball_state.velocity.x;
   }
 
-  // Second, y-coordinate
-  if (next_pos[1] < 0 || next_pos[1] > 5) {
-    new_vel[1] *= -1;
+  byte next_y = next_ball_position.y;
+  if (next_y == 0 || next_y == 5) {
+    next_ball_velocity.y = ball_state.velocity.y * -1;
+  } else {
+    next_ball_velocity.y = ball_state.velocity.y;
   }
-
-  memcpy(bv, new_vel, sizeof(byte) * 2);
-  addVecs(bp, bv, bp);
+  
+  state.ball_state.position = next_ball_position;
+  state.ball_state.velocity = next_ball_velocity;
 }
 
-byte* getPattern(byte p1p, byte p1l, byte p2p, byte p2l, byte* bp) {
-  byte pattern[36];
-  memcpy(pattern, blank, sizeof(byte) * 36);
-  for (int i = 0; i < p1l; i++) {
-    pattern[p1p + i] = 1;
-  }
-  for (int i = 0; i < p2l; i++) {
-    pattern[6 * 5 + p2p + i] = 1;
-  }
-  pattern[6 * bp[0] + bp[1]] = 1;
-  return pattern;
-}
-
-//byte[6][6] toArray(byte* ptr) {
-//  byte arr[6][6];
-//  for (int r = 0; r < 6; r++) {
-//    for (int c = 0; c < 6; c++) {
-//      arr[r][c] = ptr[6*r + c];
-//    }
-//  }
-//  return arr;
-//}
-
-// int rep = 0;
-/* States are: 
-  0: menu
-  1: playing pong game
-*/
-int state = 0;
-byte p1_length = 6;
-byte p2_length = 6;
-byte p1_pos = 0;
-byte p2_pos = 0;
-int game_start = 0;
-byte ball_pos[2];
-byte ball_vel[2];
-int ball_speed;
-void ben_loop() {
-  if (state == 0) {
-    if (true) {
-      state = 1;
-      ball_pos[0] = 1;
-      ball_pos[1] = 0;
-      ball_vel[0] = 1;
-      ball_vel[1] = 1;
-//      ball_vel = {1, 1};
-      ball_speed = 1000;
-      game_start = millis(); 
+void print_state(game_state_t state) {
+  byte pattern[6][6];
+  for (int i = 0; i<6; i++) {
+    for (int j = 0; j<6; j++) {
+      pattern[i][j]=0;
     }
   }
-
-  else if (state == 1) {
-    if ((millis() - game_start) % ball_speed == 0) {
-      procede(p1_pos, p1_length, p2_pos, p2_length, ball_pos, ball_vel);
-    }
-    byte* pattern = getPattern(p1_pos, p1_length, p2_pos, p2_length, ball_pos);
-    display((byte[6][6])pattern);
+  for (int i = 0; i < state.paddle_lengths; i++) {
+    pattern[state.p1_position + i][0] = 1;
   }
+  for (int i = 0; i < state.paddle_lengths; i++) {
+    pattern[state.p2_position + i][0] = 1;
+  }
+  ball_state_t ball_state = state.ball_state;
+  pattern[ball_state.x][ball_state.y] = 1;
+  display(pattern);
 }
 
 byte get_pos(int pin, byte paddle_size) {
@@ -190,17 +177,9 @@ byte get_pos(int pin, byte paddle_size) {
 }
 
 void loop() {
-  byte pattern[6][6];
-  for (int i = 0; i<6; i++) {
-    for (int j = 0; j<6; j++) {
-      pattern[i][j]=0;
-    }
-  }
-  int Apos = get_pos(A3, 2);
-  pattern[Apos][0] = 1;
-  pattern[Apos + 1][0] = 1;
-  int Bpos = get_pos(A0, 2);
-  pattern[Bpos][5] = 1;
-  pattern[Bpos + 1][5] = 1;
+  static int game_start = millis();
+  state.p1_position = get_pos(A3, state.paddle_lengths);
+  state.p2_position = get_pos(A0, state.paddle_lengths);
+  state = proceed(state);
   display(pattern);
 }
