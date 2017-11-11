@@ -182,7 +182,7 @@ void loop() {
   static int game_start = millis();
   state.p1_position = get_pos(A3, state.paddle_lengths);
   state.p2_position = get_pos(A0, state.paddle_lengths);
-  if (millis() - game_start % 100 == 0) {
+  if ((millis() - game_start) % 100 == 0) {
     state = proceed(state);
   }
   print_state(state);
