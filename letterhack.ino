@@ -17,6 +17,7 @@ typedef struct game_state_struct {
   byte paddle_lengths;
   byte p1_position;
   byte p2_position;
+  bool finished;
 } game_state_t;
 
 
@@ -56,6 +57,7 @@ void setup() {
   state.p1_position = 0;
   state.p2_position = 0;
   state.paddle_lengths = 2;
+  state.finished = false;
 
 }
 
@@ -127,28 +129,44 @@ vec_t addVecs(vec_t v1, vec_t v2) {
   return sum;
 }
 
+game_state_t move_ball(game_state_t state) {
+  ball_state_t b = state->ball_state;
+  state.ball_state.position = addVecs(b.position, b.velocity);
+  return state;
+}
+
+bool blocked_by_player(game_state_t state) {
+  byte x = state.ball_state.position.x;
+  byte paddle_pos = (x == 0) ? state.p1_position : state.p2.position;
+  return x >= paddle_pos && x < paddle_pos + state.paddle_lengths;
+}
+
 game_state_t proceed(game_state_t state) {
-  ball_state_t ball_state = state.ball_state;
-  vec_t next_ball_position = addVecs(ball_state.position, ball_state.velocity);
+  state = move_ball(state);
 
-  vec_t next_ball_velocity;
-
-  byte next_x = next_ball_position.x;
-  if (next_x == 0 || next_x == 5) {
-    next_ball_velocity.x = ball_state.velocity.x * -1;
-  } else {
-    next_ball_velocity.x = ball_state.velocity.x;
+  switch (state.ball_state.position.x) {
+    case 0:
+      if (blocked_by_player(state)) {
+        state.ball_state.velocity.x *= -1
+      } else {
+        state.ended = true;
+      }
+    break;
+    case 5:
+      if (blocked_by_player(state)) {
+        state.ball_state.velocity.x *= -1
+      } else {
+        state.ended = true;
+      }
+    break;
+  }
+  switch (state.ball_state.position.y) {
+    case 0:
+    case 5:
+        state.ball_state.velocity.y *= -1
+    break;
   }
 
-  byte next_y = next_ball_position.y;
-  if (next_y == 0 || next_y == 5) {
-    next_ball_velocity.y = ball_state.velocity.y * -1;
-  } else {
-    next_ball_velocity.y = ball_state.velocity.y;
-  }
-  
-  state.ball_state.position = next_ball_position;
-  state.ball_state.velocity = next_ball_velocity;
   return state;
 }
 
@@ -179,10 +197,11 @@ byte get_pos(int pin, byte paddle_size) {
 }
 
 void loop() {
-  static int game_start = millis();
+  static unsigned long next_frame = millis();
   state.p1_position = get_pos(A3, state.paddle_lengths);
   state.p2_position = get_pos(A0, state.paddle_lengths);
-  if ((millis() - game_start) % 100 == 0) {
+  if (millis() > next_frame && !state.finished) {
+    next_frame += 1000;
     state = proceed(state);
   }
   print_state(state);
