@@ -20,6 +20,7 @@ typedef struct player_state_struct {
   int pin;
   unsigned long next_sense;
   int paddle_size;
+  int score;
 } player_state_t;
   
 
@@ -28,6 +29,7 @@ typedef struct game_state_struct {
   player_state_t p1_state;
   player_state_t p2_state;
   bool finished;
+  bool p_one_won;
   bool cleared;
 } game_state_t;
 
@@ -225,6 +227,20 @@ byte q_mark[6][6] = {{0, 1, 1, 1, 1, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 1, 1, 0, 0}};
 
+byte num_1[6][6] = {{0, 0, 1, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0},
+                {0, 1, 1, 1, 1, 0}};
+
+byte num_2[6][6] = {{0, 1, 1, 1, 1, 0},
+                {0, 0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 1, 0},
+                {0, 1, 1, 0, 0, 0},
+                {0, 1, 0, 0, 0, 0},
+                {0, 1, 1, 1, 1, 0}};
+
 vec_t addVecs(vec_t v1, vec_t v2) {
   vec_t sum;
   sum.x = v1.x + v2.x;
@@ -245,6 +261,8 @@ void block(game_state_t *state) {
   if (x < paddle_pos || x >= paddle_pos + target->paddle_size) {
     state->finished = true;
     state->cleared = false;
+    target->score++;
+    state->p_one_won = (y != 0);
     target->paddle_size = 0;
     return;
   }
@@ -317,15 +335,62 @@ void update_player(player_state_t *state) {
   }
 }
 
+void display_message() {
+  byte letters[36][6];
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      letters[row][col] = p[row][col];
+    }
+  }
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      letters[row + 6][col] = l[row][col];
+    }
+  }
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      letters[row + 12][col] = a[row][col];
+    }
+  }
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      letters[row+18][col] = y[row][col];
+    }
+  }
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      letters[row+24][col] = e[row][col];
+    }
+  }
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      letters[row+30][col] = r[row][col];
+    }
+  }
+  for (int frame = 0; frame < 31; frame++) {
+    byte current[6][6];
+    for (int row = 0; row < 6; row++) {
+      for (int col = 0; col < 6; col++) {
+        current[row][col] = letters[row + frame][col];
+      }
+    }
+    display(current);
+    delay(200);
+  }
+}
+
 void loop() {
   static unsigned long next_frame = millis() + 2000;
   static game_state_t state = get_init();
   static bool waiting = false;
+  static int player_one_score = 0;
+  static int player_two_score = 0;
   update_player(&state.p1_state);
   update_player(&state.p2_state);
   if (state.finished && !waiting) {
     waiting = true;
-    next_frame += 2000;
+    display_message();
+//      next_frame += 2000;
   }
   if (millis() > next_frame) {
     if (waiting) {
