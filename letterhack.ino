@@ -335,7 +335,7 @@ void update_player(player_state_t *state) {
   }
 }
 
-void display_message() {
+void display_message(int frame) {
   byte letters[36][6];
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
@@ -367,16 +367,13 @@ void display_message() {
       letters[row+30][col] = r[row][col];
     }
   }
-  for (int frame = 0; frame < 31; frame++) {
-    byte current[6][6];
-    for (int row = 0; row < 6; row++) {
-      for (int col = 0; col < 6; col++) {
-        current[row][col] = letters[row + frame][col];
-      }
+  byte current[6][6];
+  for (int row = 0; row < 6; row++) {
+    for (int col = 0; col < 6; col++) {
+      current[row][col] = letters[row + frame][col];
     }
-    display(current);
-    delay(200);
   }
+  display(current);
 }
 
 void loop() {
@@ -385,12 +382,26 @@ void loop() {
   static bool waiting = false;
   static int player_one_score = 0;
   static int player_two_score = 0;
+  static bool showing_message = false;
+  static int message_frame = 0;
+  if (showing_message) {
+    if (millis() > next_frame) {
+      next_frame += 200;
+      message_frame++;
+    }
+    if (message_frame == 36) {
+      showing_message = false;
+    }
+    else {
+      display_message(message_frame);
+    }
+  }
   update_player(&state.p1_state);
   update_player(&state.p2_state);
   if (state.finished && !waiting) {
     waiting = true;
-    display_message();
-//      next_frame += 2000;
+    showing_message = true;
+    next_frame += 200;
   }
   if (millis() > next_frame) {
     if (waiting) {
