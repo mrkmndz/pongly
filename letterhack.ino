@@ -396,25 +396,27 @@ void loop() {
       display_message(message_frame);
     }
   }
-  update_player(&state.p1_state);
-  update_player(&state.p2_state);
-  if (state.finished && !waiting) {
-    waiting = true;
-    showing_message = true;
-    next_frame += 200;
-  }
-  if (millis() > next_frame) {
-    if (waiting) {
-      waiting = false;
-      if (state.cleared) {
-        state.finished = false;
-      } else {
-        state = get_init();
-      }
-    }
-    if (!state.finished) {
+  else {
+    update_player(&state.p1_state);
+    update_player(&state.p2_state);
+    if (state.finished && !waiting) {
+      waiting = true;
+      showing_message = true;
       next_frame += 200;
-      state = proceed(state);
+    }
+    if (millis() > next_frame) {
+      if (waiting) {
+        waiting = false;
+        if (state.cleared) {
+          state.finished = false;
+        } else {
+          state = get_init();
+        }
+      }
+      if (!state.finished) {
+        next_frame += 200;
+        state = proceed(state);
+      }
     }
   }
   print_state(state);
