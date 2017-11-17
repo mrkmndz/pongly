@@ -336,7 +336,7 @@ void update_player(player_state_t *state) {
 }
 
 void display_message(int frame) {
-  byte letters[36][6];
+  byte letters[41][6];
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
       letters[row][col] = p[row][col];
@@ -344,27 +344,27 @@ void display_message(int frame) {
   }
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
-      letters[row + 6][col] = l[row][col];
+      letters[row + 7][col] = l[row][col];
     }
   }
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
-      letters[row + 12][col] = a[row][col];
+      letters[row + 14][col] = a[row][col];
     }
   }
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
-      letters[row+18][col] = y[row][col];
+      letters[row+21][col] = y[row][col];
     }
   }
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
-      letters[row+24][col] = e[row][col];
+      letters[row+28][col] = e[row][col];
     }
   }
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
-      letters[row+30][col] = r[row][col];
+      letters[row+35][col] = r[row][col];
     }
   }
   byte current[6][6];
@@ -391,6 +391,8 @@ void loop() {
     }
     if (message_frame == 36) {
       showing_message = false;
+      next_frame += 200;
+      state.finished = false;
     }
     else {
       display_message(message_frame);
